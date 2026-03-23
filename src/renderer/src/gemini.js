@@ -54,14 +54,6 @@ Keyword examples: "20 yard dumpster residential driveway", "full junk removal tr
       temperature: 0.2,
       maxOutputTokens: 256,
       response_mime_type: 'application/json',
-      response_schema: {
-        type: 'OBJECT',
-        properties: {
-          keywords: { type: 'STRING' },
-          subject:  { type: 'STRING' },
-        },
-        required: ['keywords', 'subject'],
-      },
     },
   });
 
@@ -80,7 +72,15 @@ Keyword examples: "20 yard dumpster residential driveway", "full junk removal tr
 
     if (res.ok) {
       const data = await res.json();
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const candidate = data.candidates?.[0];
+      const text = candidate?.content?.parts?.[0]?.text?.trim() || '';
+
+      if (!text) {
+        const reason = candidate?.finishReason || 'unknown';
+        lastError = `Model ${model} returned no content (finishReason: ${reason}). Trying next model…`;
+        continue;
+      }
+
       return { ...JSON.parse(text), model };
     }
 
