@@ -9,9 +9,9 @@ const BUSINESS_TYPES = [
 const TONES = ['Professional', 'Friendly', 'Casual', 'Bold'];
 
 const GEMINI_MODELS = [
-  { value: 'gemini-2.0-flash',    label: 'Gemini 2.0 Flash (recommended)' },
-  { value: 'gemini-1.5-flash',    label: 'Gemini 1.5 Flash' },
-  { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B (lowest quota)' },
+  { value: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash (recommended)' },
+  { value: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash' },
+  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (lowest quota)' },
 ];
 
 const EMPTY_BUSINESS = { name: '', type: 'Dumpster Rental', phone: '', website: '', tone: 'Friendly' };

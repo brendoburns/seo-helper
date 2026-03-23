@@ -1,7 +1,7 @@
 const MODELS = [
-  'gemini-2.0-flash',
-  'gemini-1.5-flash',
-  'gemini-1.5-flash-8b',
+  'gemini-2.5-flash',      // best quality, free tier
+  'gemini-2.0-flash',      // stable fallback
+  'gemini-2.0-flash-lite', // lightest, lowest quota usage
 ];
 
 function geminiUrl(model) {
