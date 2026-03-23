@@ -2,7 +2,9 @@ const { app, BrowserWindow, ipcMain, dialog, shell } = require('electron');
 const path = require('path');
 const fs = require('fs');
 const os = require('os');
-const store = require('./store');
+const db = require('./db');
+
+const isDev = process.env.NODE_ENV === 'development' || process.argv.includes('--dev');
 
 let mainWindow;
 
@@ -18,19 +20,29 @@ function createWindow() {
       contextIsolation: true,
       nodeIntegration: false,
     },
-    backgroundColor: '#0e0e0e',
+    backgroundColor: '#16181f',
     show: false,
   });
 
-  mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
+  if (isDev) {
+    loadDevURL(mainWindow);
+    mainWindow.webContents.openDevTools();
+  } else {
+    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'renderer', 'index.html'));
+  }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  mainWindow.once('ready-to-show', () => mainWindow.show());
+}
+
+// Retry loading the Vite dev server until it's ready
+function loadDevURL(win, retries = 20) {
+  win.loadURL('http://localhost:5173').catch(() => {
+    if (retries > 0) setTimeout(() => loadDevURL(win, retries - 1), 500);
   });
 }
 
 app.whenReady().then(() => {
-  store.init(app.getPath('userData'));
+  db.init(app.getPath('userData'));
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -78,14 +90,11 @@ ipcMain.handle('get-downloads', () => {
 });
 
 // ── IPC: Load persisted locations ────────────────────────────
-ipcMain.handle('locations-load', async () => {
-  const data = await store.read();
-  return Array.isArray(data.locations) ? data.locations : [];
+ipcMain.handle('locations-load', () => {
+  return db.getLocations();
 });
 
 // ── IPC: Save locations ───────────────────────────────────────
-ipcMain.handle('locations-save', async (_event, locations) => {
-  const data = await store.read();
-  data.locations = locations;
-  await store.write(data);
+ipcMain.handle('locations-save', (_event, locations) => {
+  db.saveLocations(locations);
 });
