@@ -84,7 +84,7 @@ Keyword rules:
     const errData = await res.json().catch(() => ({}));
     const errMsg = errData.error?.message || `Gemini API error ${res.status}`;
 
-    // Only fall back on quota errors — hard-fail on auth/invalid key
+    // Quota exhausted — try next model
     if (res.status === 429 || errMsg.toLowerCase().includes('quota')) {
       const retryMatch = errMsg.match(/retry in ([\d.]+)s/i);
       const retrySecs = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
@@ -92,6 +92,17 @@ Keyword rules:
         ? `Quota exceeded on ${model}. Retry in ${retrySecs}s.`
         : `Quota exceeded on ${model}, trying next model…`;
       continue;
+    }
+
+    // Model not found — likely a key/project issue, not a model name issue
+    if (res.status === 404 || errMsg.toLowerCase().includes('not found')) {
+      lastError = `Model not available for this API key. Try a different model in Settings, or get a free key at aistudio.google.com.`;
+      continue;
+    }
+
+    // Auth error — bad key, stop immediately
+    if (res.status === 400 || res.status === 401 || res.status === 403) {
+      throw new Error('Invalid API key. Get a free key at aistudio.google.com → Get API key.');
     }
 
     throw new Error(errMsg);
