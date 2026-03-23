@@ -41,8 +41,8 @@ function loadDevURL(win, retries = 20) {
   });
 }
 
-app.whenReady().then(() => {
-  db.init(app.getPath('userData'));
+app.whenReady().then(async () => {
+  await db.init(app.getPath('userData'));
   createWindow();
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();

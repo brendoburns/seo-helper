@@ -2,18 +2,26 @@ const path = require('path');
 const fs = require('fs');
 
 let db = null;
+let dbPath = null;
 
-function init(userDataPath) {
-  const Database = require('better-sqlite3');
-  const dbPath = path.join(userDataPath, 'seohelper.db');
-  db = new Database(dbPath);
-  db.pragma('journal_mode = WAL');
-  db.pragma('foreign_keys = ON');
-  migrate(userDataPath);
+function persist() {
+  const data = db.export();
+  fs.writeFileSync(dbPath, Buffer.from(data));
 }
 
-function migrate(userDataPath) {
-  db.exec(`
+async function init(userDataPath) {
+  const initSqlJs = require('sql.js');
+  dbPath = path.join(userDataPath, 'seohelper.db');
+
+  const SQL = await initSqlJs();
+
+  if (fs.existsSync(dbPath)) {
+    db = new SQL.Database(fs.readFileSync(dbPath));
+  } else {
+    db = new SQL.Database();
+  }
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS locations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -44,37 +52,38 @@ function migrate(userDataPath) {
   `);
 
   // Migrate from legacy store.json if locations table is empty
-  const locCount = db.prepare('SELECT COUNT(*) as c FROM locations').get().c;
-  if (locCount === 0) {
-    const storePath = path.join(userDataPath, 'store.json');
+  const result = db.exec('SELECT COUNT(*) as c FROM locations');
+  const count = result[0]?.values[0][0] ?? 0;
+  if (count === 0) {
+    const legacyPath = path.join(userDataPath, 'store.json');
     try {
-      const raw = fs.readFileSync(storePath, 'utf8');
-      const data = JSON.parse(raw);
-      if (Array.isArray(data.locations) && data.locations.length > 0) {
-        const insert = db.prepare('INSERT INTO locations (name, sort_order) VALUES (?, ?)');
-        const insertMany = db.transaction((locs) => {
-          locs.forEach((name, i) => insert.run(name, i));
-        });
-        insertMany(data.locations);
+      const old = JSON.parse(fs.readFileSync(legacyPath, 'utf8'));
+      if (Array.isArray(old.locations) && old.locations.length > 0) {
+        const stmt = db.prepare('INSERT INTO locations (name, sort_order) VALUES (?, ?)');
+        old.locations.forEach((name, i) => stmt.run([name, i]));
+        stmt.free();
       }
     } catch {
-      // No legacy store — nothing to migrate
+      // No legacy store
     }
   }
+
+  persist();
 }
 
 function getLocations() {
-  return db.prepare('SELECT name FROM locations ORDER BY sort_order, id').all().map((r) => r.name);
+  if (!db) return [];
+  const result = db.exec('SELECT name FROM locations ORDER BY sort_order, id');
+  return result[0]?.values.map((r) => r[0]) ?? [];
 }
 
 function saveLocations(locations) {
-  const clear = db.prepare('DELETE FROM locations');
-  const insert = db.prepare('INSERT INTO locations (name, sort_order) VALUES (?, ?)');
-  const run = db.transaction((locs) => {
-    clear.run();
-    locs.forEach((name, i) => insert.run(name, i));
-  });
-  run(locations);
+  if (!db) return;
+  db.run('DELETE FROM locations');
+  const stmt = db.prepare('INSERT INTO locations (name, sort_order) VALUES (?, ?)');
+  locations.forEach((name, i) => stmt.run([name, i]));
+  stmt.free();
+  persist();
 }
 
 module.exports = { init, getLocations, saveLocations };

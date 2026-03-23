@@ -4,7 +4,7 @@
   "description": "SEO photo batch renamer and social post planner",
   "main": "src/main.js",
   "scripts": {
-    "start": "concurrently -k -n VITE,ELECTRON \"vite\" \"electron .\"",
+    "start": "cross-env NODE_ENV=development concurrently -k -n VITE,ELECTRON \"vite\" \"electron .\"",
     "dev": "cross-env NODE_ENV=development concurrently -k -n VITE,ELECTRON \"vite\" \"electron . --dev\"",
     "test": "jest",
     "lint": "eslint src tests",
@@ -12,14 +12,9 @@
     "build:renderer": "vite build",
     "build:mac": "npm run build:renderer && electron-builder --mac",
     "build:win": "npm run build:renderer && electron-builder --win",
-    "build:all": "npm run build:renderer && electron-builder --win --mac",
-    "postinstall": "electron-rebuild"
-  },
-  "dependencies": {
-    "better-sqlite3": "^9.0.0"
+    "build:all": "npm run build:renderer && electron-builder --win --mac"
   },
   "devDependencies": {
-    "@electron/rebuild": "^3.6.0",
     "@eslint/js": "^9.0.0",
     "@vitejs/plugin-react": "^4.0.0",
     "concurrently": "^8.0.0",
@@ -45,7 +40,8 @@
       "src/preload.js",
       "src/db.js",
       "src/lib/**/*",
-      "dist/renderer/**/*"
+      "dist/renderer/**/*",
+      "node_modules/sql.js/**/*"
     ],
     "win": {
       "target": [
@@ -74,5 +70,8 @@
       "perMachine": false,
       "allowToChangeInstallationDirectory": false
     }
+  },
+  "dependencies": {
+    "sql.js": "^1.14.1"
   }
 }
