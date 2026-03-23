@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { buildFilename, getExt } from '@lib/filename.esm.js';
+import { analyzeImageForKeywords } from '../gemini.js';
 
 const api = window.electronAPI;
 
@@ -13,20 +14,29 @@ export default function RenameView() {
     running: false,
     progress: 0,
     message: '',
-    type: 'idle', // 'idle' | 'running' | 'success' | 'error'
+    type: 'idle',
   });
   const [lastExportDir, setLastExportDir] = useState(null);
+  const [geminiKey, setGeminiKey] = useState('');
+  const [activeBusiness, setActiveBusiness] = useState(null);
+  const [analyzing, setAnalyzing] = useState(false);
+  const [analyzeError, setAnalyzeError] = useState('');
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
   const keywordsInputRef = useRef(null);
 
-  // Init: load locations + default output dir
+  // Init: load locations, output dir, settings, active business
   useEffect(() => {
     api.loadLocations().then((saved) => {
       if (saved.length > 0) setLocations(saved);
     });
     api.getDownloads().then((dl) => setOutputDir(dl));
+    api.loadSettings().then((s) => setGeminiKey(s.geminiKey || ''));
+    api.loadBusinesses().then((biz) => {
+      const active = biz.find((b) => b.isActive) || biz[0] || null;
+      setActiveBusiness(active);
+    });
   }, []);
 
   // Keyboard navigation (arrow keys)
@@ -68,6 +78,23 @@ export default function RenameView() {
     setCurrentIndex(0);
     setExportState({ running: false, progress: 0, message: '', type: 'idle' });
     setLastExportDir(null);
+  }
+
+  // ── AI Analyze ────────────────────────────────────────────────
+  async function analyzeCurrentPhoto() {
+    const photo = photos[currentIndex];
+    if (!photo || !geminiKey || !activeBusiness) return;
+    setAnalyzing(true);
+    setAnalyzeError('');
+    try {
+      const result = await analyzeImageForKeywords(photo.file, activeBusiness, geminiKey);
+      updateKeywords(result.keywords);
+    } catch (err) {
+      setAnalyzeError(err.message);
+      setTimeout(() => setAnalyzeError(''), 4000);
+    } finally {
+      setAnalyzing(false);
+    }
   }
 
   // ── Keywords ──────────────────────────────────────────────────
@@ -214,6 +241,10 @@ export default function RenameView() {
               onKeywordsChange={updateKeywords}
               onToggleChecked={toggleChecked}
               keywordsInputRef={keywordsInputRef}
+              canAnalyze={!!geminiKey && !!activeBusiness}
+              analyzing={analyzing}
+              analyzeError={analyzeError}
+              onAnalyze={analyzeCurrentPhoto}
             />
           )}
         </div>
@@ -396,6 +427,10 @@ function Viewer({
   onKeywordsChange,
   onToggleChecked,
   keywordsInputRef,
+  canAnalyze,
+  analyzing,
+  analyzeError,
+  onAnalyze,
 }) {
   const filmstripRef = useRef(null);
 
@@ -445,8 +480,20 @@ function Viewer({
 
       {/* Keywords */}
       <div className="viewer-keywords">
-        <div className="section-label">
-          Keywords <span className="kw-hint">{kwHint}</span>
+        <div className="kw-label-row">
+          <div className="section-label" style={{ marginBottom: 0 }}>
+            Keywords <span className="kw-hint">{kwHint}</span>
+          </div>
+          {canAnalyze && (
+            <button
+              className={`analyze-btn${analyzing ? ' loading' : ''}`}
+              onClick={onAnalyze}
+              disabled={analyzing || !currentPhoto}
+              title="Analyze image with Gemini AI"
+            >
+              {analyzing ? '⏳ Analyzing…' : '✨ Analyze'}
+            </button>
+          )}
         </div>
         <input
           ref={keywordsInputRef}
@@ -458,9 +505,10 @@ function Viewer({
           }}
           placeholder="e.g. 30 ft rollout dumpster"
         />
-        <div className="tip">
-          Output: <span className="accent2">keywords-City-State.jpg</span>
-        </div>
+        {analyzeError
+          ? <div className="tip" style={{ color: 'var(--danger)' }}>✗ {analyzeError}</div>
+          : <div className="tip">Output: <span className="accent2">keywords-City-State.jpg</span></div>
+        }
       </div>
 
       {/* Filmstrip */}
