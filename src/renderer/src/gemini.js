@@ -81,7 +81,12 @@ Keyword examples: "20 yard dumpster residential driveway", "full junk removal tr
         continue;
       }
 
-      return { ...JSON.parse(text), model };
+      const parsed = extractJson(text);
+      if (!parsed) {
+        lastError = `Model ${model} returned unrecognized format. Trying next model…`;
+        continue;
+      }
+      return { ...parsed, model };
     }
 
     const errData = await res.json().catch(() => ({}));
@@ -114,6 +119,17 @@ Keyword examples: "20 yard dumpster residential driveway", "full junk removal tr
   throw new Error(lastError || 'All Gemini models quota exceeded. Try again later.');
 }
 
+
+function extractJson(text) {
+  // Try raw parse first (response_mime_type honored)
+  try { return JSON.parse(text); } catch (_) { /* fall through */ }
+  // Extract first {...} block when model wraps JSON in prose
+  const match = text.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch (_) { /* fall through */ }
+  }
+  return null;
+}
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
