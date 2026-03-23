@@ -7,4 +7,6 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getDownloads: () => ipcRenderer.invoke('get-downloads'),
   loadLocations: () => ipcRenderer.invoke('locations-load'),
   saveLocations: (locations) => ipcRenderer.invoke('locations-save', locations),
+  loadSettings: () => ipcRenderer.invoke('settings-load'),
+  saveSettings: (settings) => ipcRenderer.invoke('settings-save', settings),
 });

@@ -22,6 +22,11 @@ async function init(userDataPath) {
   }
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL DEFAULT ''
+    );
+
     CREATE TABLE IF NOT EXISTS locations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -86,4 +91,19 @@ function saveLocations(locations) {
   persist();
 }
 
-module.exports = { init, getLocations, saveLocations };
+function getSettings() {
+  if (!db) return {};
+  const result = db.exec('SELECT key, value FROM settings');
+  if (!result[0]) return {};
+  return Object.fromEntries(result[0].values.map(([k, v]) => [k, v]));
+}
+
+function saveSettings(settings) {
+  if (!db) return;
+  const stmt = db.prepare('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)');
+  Object.entries(settings).forEach(([k, v]) => stmt.run([k, v ?? '']));
+  stmt.free();
+  persist();
+}
+
+module.exports = { init, getLocations, saveLocations, getSettings, saveSettings };

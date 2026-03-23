@@ -98,3 +98,13 @@ ipcMain.handle('locations-load', () => {
 ipcMain.handle('locations-save', (_event, locations) => {
   db.saveLocations(locations);
 });
+
+// ── IPC: Load settings ────────────────────────────────────────
+ipcMain.handle('settings-load', () => {
+  return db.getSettings();
+});
+
+// ── IPC: Save settings ────────────────────────────────────────
+ipcMain.handle('settings-save', (_event, settings) => {
+  db.saveSettings(settings);
+});
