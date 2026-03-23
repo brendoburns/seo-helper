@@ -14,23 +14,20 @@
     "build:all": "electron-builder --win --mac"
   },
   "build": {
-    "appId": "com.filerenamer.app",
-    "productName": "FileRenamer",
+    "appId": "com.seohelper.app",
+    "productName": "SEOHelper",
     "directories": {
       "output": "dist"
     },
     "files": [
       "src/**/*",
-      "assets/**/*",
       "node_modules/**/*"
     ],
     "win": {
-      "target": [{ "target": "nsis", "arch": ["x64"] }],
-      "icon": "assets/icon.ico"
+      "target": [{ "target": "nsis", "arch": ["x64"] }]
     },
     "mac": {
       "target": [{ "target": "dmg", "arch": ["x64", "arm64"] }],
-      "icon": "assets/icon.icns",
       "category": "public.app-category.productivity"
     },
     "nsis": {
