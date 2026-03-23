@@ -18,6 +18,7 @@ export default function RenameView() {
   });
   const [lastExportDir, setLastExportDir] = useState(null);
   const [geminiKey, setGeminiKey] = useState('');
+  const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
   const [activeBusiness, setActiveBusiness] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState('');
@@ -32,7 +33,10 @@ export default function RenameView() {
       if (saved.length > 0) setLocations(saved);
     });
     api.getDownloads().then((dl) => setOutputDir(dl));
-    api.loadSettings().then((s) => setGeminiKey(s.geminiKey || ''));
+    api.loadSettings().then((s) => {
+      setGeminiKey(s.geminiKey || '');
+      setGeminiModel(s.geminiModel || 'gemini-2.0-flash');
+    });
     api.loadBusinesses().then((biz) => {
       const active = biz.find((b) => b.isActive) || biz[0] || null;
       setActiveBusiness(active);
@@ -87,7 +91,7 @@ export default function RenameView() {
     setAnalyzing(true);
     setAnalyzeError('');
     try {
-      const result = await analyzeImageForKeywords(photo.file, activeBusiness, geminiKey);
+      const result = await analyzeImageForKeywords(photo.file, activeBusiness, geminiKey, geminiModel);
       updateKeywords(result.keywords);
     } catch (err) {
       setAnalyzeError(err.message);

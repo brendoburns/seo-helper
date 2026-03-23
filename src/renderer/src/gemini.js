@@ -1,5 +1,12 @@
-const GEMINI_URL =
-  'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent';
+const MODELS = [
+  'gemini-2.0-flash',
+  'gemini-1.5-flash',
+  'gemini-1.5-flash-8b',
+];
+
+function geminiUrl(model) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+}
 
 const SYSTEM_PROMPT = `You are an expert local SEO marketer specializing in home services
 and contractor businesses (dumpster rental, junk removal, landscaping, roofing, plumbing, HVAC, etc.).
@@ -21,9 +28,10 @@ You always return valid JSON only. No markdown, no explanation outside the JSON.
  * @param {File} imageFile
  * @param {{ name: string, type: string }} business
  * @param {string} apiKey
+ * @param {string} [preferredModel]
  * @returns {Promise<{ keywords: string, subject: string }>}
  */
-export async function analyzeImageForKeywords(imageFile, business, apiKey) {
+export async function analyzeImageForKeywords(imageFile, business, apiKey, preferredModel) {
   const base64 = await fileToBase64(imageFile);
   const mimeType = imageFile.type || 'image/jpeg';
 
@@ -41,33 +49,55 @@ Keyword rules:
 - Do NOT include city or state names — location is added separately
 - Examples: "20 yard dumpster residential driveway", "full junk removal truck load", "roll off container concrete debris"`;
 
-  const res = await fetch(`${GEMINI_URL}?key=${apiKey}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [{
-        parts: [
-          { inline_data: { mime_type: mimeType, data: base64 } },
-          { text: userPrompt },
-        ],
-      }],
-      generationConfig: { temperature: 0.2, maxOutputTokens: 256 },
-    }),
+  const body = JSON.stringify({
+    system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [{
+      parts: [
+        { inline_data: { mime_type: mimeType, data: base64 } },
+        { text: userPrompt },
+      ],
+    }],
+    generationConfig: { temperature: 0.2, maxOutputTokens: 256 },
   });
 
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({}));
-    throw new Error(err.error?.message || `Gemini API error ${res.status}`);
+  // Try preferred model first, then fall back through the list
+  const tryOrder = preferredModel
+    ? [preferredModel, ...MODELS.filter((m) => m !== preferredModel)]
+    : MODELS;
+
+  let lastError = null;
+  for (const model of tryOrder) {
+    const res = await fetch(`${geminiUrl(model)}?key=${apiKey}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      const match = text.match(/\{[\s\S]*?\}/);
+      if (!match) throw new Error('Could not parse Gemini response');
+      return { ...JSON.parse(match[0]), model };
+    }
+
+    const errData = await res.json().catch(() => ({}));
+    const errMsg = errData.error?.message || `Gemini API error ${res.status}`;
+
+    // Only fall back on quota errors — hard-fail on auth/invalid key
+    if (res.status === 429 || errMsg.toLowerCase().includes('quota')) {
+      const retryMatch = errMsg.match(/retry in ([\d.]+)s/i);
+      const retrySecs = retryMatch ? Math.ceil(parseFloat(retryMatch[1])) : null;
+      lastError = retrySecs
+        ? `Quota exceeded on ${model}. Retry in ${retrySecs}s.`
+        : `Quota exceeded on ${model}, trying next model…`;
+      continue;
+    }
+
+    throw new Error(errMsg);
   }
 
-  const data = await res.json();
-  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-
-  const match = text.match(/\{[\s\S]*?\}/);
-  if (!match) throw new Error('Could not parse Gemini response');
-
-  return JSON.parse(match[0]);
+  throw new Error(lastError || 'All Gemini models quota exceeded. Try again later.');
 }
 
 function fileToBase64(file) {

@@ -8,6 +8,12 @@ const BUSINESS_TYPES = [
 ];
 const TONES = ['Professional', 'Friendly', 'Casual', 'Bold'];
 
+const GEMINI_MODELS = [
+  { value: 'gemini-2.0-flash',    label: 'Gemini 2.0 Flash (recommended)' },
+  { value: 'gemini-1.5-flash',    label: 'Gemini 1.5 Flash' },
+  { value: 'gemini-1.5-flash-8b', label: 'Gemini 1.5 Flash 8B (lowest quota)' },
+];
+
 const EMPTY_BUSINESS = { name: '', type: 'Dumpster Rental', phone: '', website: '', tone: 'Friendly' };
 
 export default function SettingsView({ onClose }) {
@@ -16,6 +22,7 @@ export default function SettingsView({ onClose }) {
   const [form, setForm] = useState(EMPTY_BUSINESS);
   const [isNew, setIsNew] = useState(false);
   const [geminiKey, setGeminiKey] = useState('');
+  const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
   const [showKey, setShowKey] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -23,6 +30,7 @@ export default function SettingsView({ onClose }) {
     Promise.all([api.loadBusinesses(), api.loadSettings()]).then(([biz, settings]) => {
       setBusinesses(biz);
       setGeminiKey(settings.geminiKey || '');
+      setGeminiModel(settings.geminiModel || 'gemini-2.0-flash');
       const active = biz.find((b) => b.isActive) || biz[0];
       if (active) { setSelectedId(active.id); setForm(active); }
     });
@@ -75,7 +83,7 @@ export default function SettingsView({ onClose }) {
   }
 
   async function saveGlobalSettings() {
-    await api.saveSettings({ geminiKey });
+    await api.saveSettings({ geminiKey, geminiModel });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -117,6 +125,15 @@ export default function SettingsView({ onClose }) {
                 ? <div className="settings-hint success">✓ AI features enabled</div>
                 : <div className="settings-hint">Without a key, template-based captions are used.</div>
               }
+            </div>
+
+            <div className="settings-field">
+              <label>Model <span className="settings-label-hint">— falls back automatically on quota errors</span></label>
+              <select value={geminiModel} onChange={(e) => { setGeminiModel(e.target.value); setSaved(false); }}>
+                {GEMINI_MODELS.map((m) => (
+                  <option key={m.value} value={m.value}>{m.label}</option>
+                ))}
+              </select>
             </div>
           </div>
 
