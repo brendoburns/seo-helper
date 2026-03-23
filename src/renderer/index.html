@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; img-src 'self' blob:">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FileRenamer</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- Hidden file inputs -->
+<input type="file" id="fileInput" accept="image/*" multiple>
+<input type="file" id="folderInput" webkitdirectory>
+
+<div class="layout">
+
+  <!-- TITLEBAR -->
+  <div class="titlebar">
+    <div class="titlebar-title">SEO<span>HELPER</span></div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- LEFT: photo viewer / load zone -->
+    <div class="col-main" id="colMain">
+
+      <!-- Load zone (shown when no photos loaded) -->
+      <div class="load-zone" id="loadZone">
+        <div class="load-zone-icon">🖼</div>
+        <div class="load-zone-title">Drop images here</div>
+        <div class="load-zone-sub">or choose below</div>
+        <div class="load-zone-btns">
+          <button class="btn btn-accent" id="pickFilesBtn">Choose Images</button>
+          <button class="btn-sm" id="pickFolderBtn">Choose Folder</button>
+        </div>
+      </div>
+
+      <!-- Viewer (shown after loading) -->
+      <div class="viewer is-hidden" id="viewer">
+
+        <!-- Nav bar -->
+        <div class="viewer-nav">
+          <button class="nav-btn" id="prevBtn" title="Previous (←)">←</button>
+          <span class="nav-counter" id="navCounter">1 / 1</span>
+          <button class="nav-btn" id="nextBtn" title="Next (→)">→</button>
+          <div class="nav-spacer"></div>
+          <button class="btn-sm" id="addMoreBtn">+ Add More</button>
+          <button class="nav-clear" id="clearBtn">✕ Clear all</button>
+        </div>
+
+        <!-- Image -->
+        <div class="viewer-image">
+          <img id="viewerImg" src="" alt="">
+        </div>
+
+        <!-- Keywords for current photo -->
+        <div class="viewer-keywords">
+          <div class="section-label">Keywords <span class="kw-hint" id="kwHint"></span></div>
+          <input type="text" id="keywords" placeholder="e.g. 30 ft rollout dumpster">
+          <div class="tip">Output: <span class="accent2">keywords-City-State.jpg</span></div>
+        </div>
+
+        <!-- Filmstrip -->
+        <div class="filmstrip-wrap">
+          <div class="filmstrip" id="filmstrip"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- RIGHT: sidebar -->
+    <div class="col-sidebar">
+
+      <div class="input-section">
+        <div class="section-label">01 — Locations</div>
+        <div class="locations-list" id="locationsList"></div>
+        <div class="add-loc-row">
+          <input type="text" id="locInput" placeholder="e.g. Elkhart, IN">
+          <button class="btn-sm" id="addLocBtn">+ Add</button>
+        </div>
+      </div>
+
+      <div class="input-section">
+        <div class="section-label">02 — Output Folder</div>
+        <div class="folder-row" id="folderRow">
+          <span class="folder-icon">📁</span>
+          <span class="folder-path" id="folderPath">Click to choose…</span>
+        </div>
+        <div class="tip">Defaults to Downloads.</div>
+      </div>
+
+      <div class="input-section preview-section">
+        <div class="preview-header-row">
+          <div class="section-label" style="margin-bottom:0">03 — Output Preview</div>
+          <span class="output-count" id="outputCount"></span>
+        </div>
+        <div class="preview-list" id="previewList">
+          <div class="empty-state" id="emptyState">
+            Add keywords &amp; a location<br>to preview filenames.
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="footer">
+    <button class="btn-sm" id="exportCurrentBtn" disabled>⬇ Export Single</button>
+    <button class="btn btn-accent" id="exportBtn" disabled>⬇ Export Selected</button>
+    <div class="progress-wrap" id="progressWrap">
+      <div class="progress-bar" id="progressBar"></div>
+    </div>
+    <span class="status" id="status"></span>
+    <span class="open-link" id="openLink">Open folder →</span>
+  </div>
+
+</div>
+
+<script src="../lib/filename.js"></script>
+<script src="renderer.js"></script>
+</body>
+</html>
