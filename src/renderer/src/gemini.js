@@ -76,9 +76,9 @@ Keyword rules:
     if (res.ok) {
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const match = text.match(/\{[\s\S]*?\}/);
-      if (!match) throw new Error('Could not parse Gemini response');
-      return { ...JSON.parse(match[0]), model };
+      const parsed = extractJson(text);
+      if (!parsed) throw new Error('Could not parse Gemini response');
+      return { ...parsed, model };
     }
 
     const errData = await res.json().catch(() => ({}));
@@ -109,6 +109,22 @@ Keyword rules:
   }
 
   throw new Error(lastError || 'All Gemini models quota exceeded. Try again later.');
+}
+
+function extractJson(text) {
+  // Strip markdown code fences: ```json ... ``` or ``` ... ```
+  const stripped = text.replace(/```(?:json)?\s*([\s\S]*?)```/i, '$1').trim();
+
+  // Try parsing the whole thing first
+  try { return JSON.parse(stripped); } catch {}
+
+  // Find the outermost { ... } block (greedy)
+  const match = stripped.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch {}
+  }
+
+  return null;
 }
 
 function fileToBase64(file) {
