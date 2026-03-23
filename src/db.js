@@ -27,6 +27,16 @@ async function init(userDataPath) {
       value TEXT NOT NULL DEFAULT ''
     );
 
+    CREATE TABLE IF NOT EXISTS businesses (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      type TEXT DEFAULT 'Dumpster Rental',
+      phone TEXT DEFAULT '',
+      website TEXT DEFAULT '',
+      tone TEXT DEFAULT 'Friendly',
+      is_active INTEGER DEFAULT 0
+    );
+
     CREATE TABLE IF NOT EXISTS locations (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       name TEXT NOT NULL,
@@ -106,4 +116,56 @@ function saveSettings(settings) {
   persist();
 }
 
-module.exports = { init, getLocations, saveLocations, getSettings, saveSettings };
+function getBusinesses() {
+  if (!db) return [];
+  const result = db.exec('SELECT id, name, type, phone, website, tone, is_active FROM businesses ORDER BY id');
+  if (!result[0]) return [];
+  return result[0].values.map(([id, name, type, phone, website, tone, is_active]) => ({
+    id, name, type, phone, website, tone, isActive: !!is_active,
+  }));
+}
+
+function saveBusiness(business) {
+  if (!db) return null;
+  if (business.id) {
+    db.run(
+      'UPDATE businesses SET name=?, type=?, phone=?, website=?, tone=? WHERE id=?',
+      [business.name, business.type, business.phone, business.website, business.tone, business.id]
+    );
+    persist();
+    return business.id;
+  } else {
+    db.run(
+      'INSERT INTO businesses (name, type, phone, website, tone) VALUES (?, ?, ?, ?, ?)',
+      [business.name, business.type || 'Dumpster Rental', business.phone || '', business.website || '', business.tone || 'Friendly']
+    );
+    persist();
+    const res = db.exec('SELECT last_insert_rowid()');
+    return res[0].values[0][0];
+  }
+}
+
+function deleteBusiness(id) {
+  if (!db) return;
+  db.run('DELETE FROM businesses WHERE id=?', [id]);
+  // If we just deleted the active one, activate the first remaining
+  const res = db.exec('SELECT COUNT(*) FROM businesses WHERE is_active=1');
+  if (res[0].values[0][0] === 0) {
+    db.run('UPDATE businesses SET is_active=1 WHERE id=(SELECT MIN(id) FROM businesses)');
+  }
+  persist();
+}
+
+function setActiveBusiness(id) {
+  if (!db) return;
+  db.run('UPDATE businesses SET is_active=0');
+  db.run('UPDATE businesses SET is_active=1 WHERE id=?', [id]);
+  persist();
+}
+
+module.exports = {
+  init,
+  getLocations, saveLocations,
+  getSettings, saveSettings,
+  getBusinesses, saveBusiness, deleteBusiness, setActiveBusiness,
+};

@@ -659,6 +659,78 @@ select:focus { border-color: var(--accent); }
   flex-shrink: 0;
 }
 
+/* ── BUSINESS LIST/FORM ── */
+.biz-layout {
+  display: grid;
+  grid-template-columns: 160px 1fr;
+  gap: 14px;
+  min-height: 0;
+}
+
+.biz-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  border-right: 1px solid var(--border);
+  padding-right: 14px;
+}
+
+.biz-item {
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s;
+  position: relative;
+}
+.biz-item:hover { background: var(--surface2); }
+.biz-item.selected { background: var(--surface2); border-color: var(--border); }
+.biz-item-name { font-size: 0.72rem; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.biz-item-type { font-size: 0.6rem; color: var(--muted); margin-top: 2px; }
+.biz-active-badge {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 0.55rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(107,159,255,0.1);
+  border: 1px solid rgba(107,159,255,0.25);
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+
+.biz-add-btn {
+  margin-top: 4px;
+  background: none;
+  border: 1px dashed var(--border);
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  border-radius: 6px;
+  padding: 7px 10px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+.biz-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+.biz-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.biz-form-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.btn-sm.danger { color: var(--danger); border-color: var(--danger); }
+.btn-sm.danger:hover { background: rgba(224,92,114,0.1); }
+
 /* ── POSTS PLACEHOLDER ── */
 .posts-placeholder {
   flex: 1;

@@ -108,3 +108,9 @@ ipcMain.handle('settings-load', () => {
 ipcMain.handle('settings-save', (_event, settings) => {
   db.saveSettings(settings);
 });
+
+// ── IPC: Businesses ───────────────────────────────────────────
+ipcMain.handle('businesses-load', () => db.getBusinesses());
+ipcMain.handle('business-save', (_e, business) => db.saveBusiness(business));
+ipcMain.handle('business-delete', (_e, id) => db.deleteBusiness(id));
+ipcMain.handle('business-set-active', (_e, id) => db.setActiveBusiness(id));
