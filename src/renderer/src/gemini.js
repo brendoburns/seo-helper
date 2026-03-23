@@ -37,17 +37,10 @@ export async function analyzeImageForKeywords(imageFile, business, apiKey, prefe
 
   const userPrompt = `Analyze this photo for a ${business.type} business called "${business.name}".
 
-Return ONLY this JSON structure:
-{
-  "keywords": "3-6 word seo phrase describing exactly what is shown",
-  "subject": "one sentence describing what you see in the photo"
-}
+Generate an SEO keyword phrase (3-6 words, lowercase, no city/state names) that describes exactly what is shown.
+Also write one sentence describing what you see.
 
-Keyword rules:
-- 3 to 6 words, all lowercase, words separated by spaces
-- Describe the specific service or equipment visible (be specific about size/type if visible)
-- Do NOT include city or state names — location is added separately
-- Examples: "20 yard dumpster residential driveway", "full junk removal truck load", "roll off container concrete debris"`;
+Keyword examples: "20 yard dumpster residential driveway", "full junk removal truck load", "roll off container concrete debris"`;
 
   const body = JSON.stringify({
     system_instruction: { parts: [{ text: SYSTEM_PROMPT }] },
@@ -57,7 +50,19 @@ Keyword rules:
         { text: userPrompt },
       ],
     }],
-    generationConfig: { temperature: 0.2, maxOutputTokens: 256 },
+    generationConfig: {
+      temperature: 0.2,
+      maxOutputTokens: 256,
+      response_mime_type: 'application/json',
+      response_schema: {
+        type: 'OBJECT',
+        properties: {
+          keywords: { type: 'STRING' },
+          subject:  { type: 'STRING' },
+        },
+        required: ['keywords', 'subject'],
+      },
+    },
   });
 
   // Try preferred model first, then fall back through the list
@@ -76,9 +81,7 @@ Keyword rules:
     if (res.ok) {
       const data = await res.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      const parsed = extractJson(text);
-      if (!parsed) throw new Error('Could not parse Gemini response');
-      return { ...parsed, model };
+      return { ...JSON.parse(text), model };
     }
 
     const errData = await res.json().catch(() => ({}));
@@ -111,21 +114,6 @@ Keyword rules:
   throw new Error(lastError || 'All Gemini models quota exceeded. Try again later.');
 }
 
-function extractJson(text) {
-  // Strip markdown code fences: ```json ... ``` or ``` ... ```
-  const stripped = text.replace(/```(?:json)?\s*([\s\S]*?)```/i, '$1').trim();
-
-  // Try parsing the whole thing first
-  try { return JSON.parse(stripped); } catch {}
-
-  // Find the outermost { ... } block (greedy)
-  const match = stripped.match(/\{[\s\S]*\}/);
-  if (match) {
-    try { return JSON.parse(match[0]); } catch {}
-  }
-
-  return null;
-}
 
 function fileToBase64(file) {
   return new Promise((resolve, reject) => {
