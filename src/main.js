@@ -109,6 +109,23 @@ ipcMain.handle('settings-save', (_event, settings) => {
   db.saveSettings(settings);
 });
 
+// ── IPC: Export post package ──────────────────────────────────
+ipcMain.handle('post-export', async (_event, { items, outputDir }) => {
+  try {
+    await fs.promises.mkdir(outputDir, { recursive: true });
+    for (const { imageData, imageFilename, caption, captionFilename } of items) {
+      const imgBuf = Buffer.from(imageData, 'base64');
+      await fs.promises.writeFile(path.join(outputDir, imageFilename), imgBuf);
+      if (caption) {
+        await fs.promises.writeFile(path.join(outputDir, captionFilename), caption, 'utf8');
+      }
+    }
+    return { ok: true, dir: outputDir };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
+});
+
 // ── IPC: Businesses ───────────────────────────────────────────
 ipcMain.handle('businesses-load', () => db.getBusinesses());
 ipcMain.handle('business-save', (_e, business) => db.saveBusiness(business));

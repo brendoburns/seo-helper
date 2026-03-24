@@ -1,7 +1,7 @@
 const MODELS = [
-  'gemini-2.5-flash',      // best quality, free tier
-  'gemini-2.0-flash',      // stable fallback
-  'gemini-2.0-flash-lite', // lightest, lowest quota usage
+  'gemini-2.0-flash',      // 15 RPM free tier — default
+  'gemini-2.0-flash-lite', // 30 RPM free tier — fallback
+  'gemini-2.5-flash',      // 5 RPM free tier — last resort
 ];
 
 function geminiUrl(model) {
@@ -83,6 +83,7 @@ Keyword examples: "20 yard dumpster residential driveway", "full junk removal tr
 
       const parsed = extractJson(text);
       if (!parsed) {
+        console.error(`[Gemini] ${model} unparseable response:`, JSON.stringify(text));
         lastError = `Model ${model} returned unrecognized format. Trying next model…`;
         continue;
       }
@@ -90,6 +91,7 @@ Keyword examples: "20 yard dumpster residential driveway", "full junk removal tr
     }
 
     const errData = await res.json().catch(() => ({}));
+    console.error(`[Gemini] ${model} → HTTP ${res.status}`, errData);
     const errMsg = errData.error?.message || `Gemini API error ${res.status}`;
 
     // Quota exhausted — try next model

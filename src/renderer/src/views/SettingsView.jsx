@@ -9,9 +9,9 @@ const BUSINESS_TYPES = [
 const TONES = ['Professional', 'Friendly', 'Casual', 'Bold'];
 
 const GEMINI_MODELS = [
-  { value: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash (recommended)' },
-  { value: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash' },
-  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (lowest quota)' },
+  { value: 'gemini-2.0-flash',      label: 'Gemini 2.0 Flash (recommended, 15 RPM)' },
+  { value: 'gemini-2.0-flash-lite', label: 'Gemini 2.0 Flash Lite (30 RPM)' },
+  { value: 'gemini-2.5-flash',      label: 'Gemini 2.5 Flash (best quality, 5 RPM)' },
 ];
 
 const EMPTY_BUSINESS = { name: '', type: 'Dumpster Rental', phone: '', website: '', tone: 'Friendly' };
@@ -21,6 +21,8 @@ export default function SettingsView({ onClose }) {
   const [selectedId, setSelectedId] = useState(null);
   const [form, setForm] = useState(EMPTY_BUSINESS);
   const [isNew, setIsNew] = useState(false);
+  const [aiProvider, setAiProvider] = useState('grok');
+  const [grokKey, setGrokKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
   const [showKey, setShowKey] = useState(false);
@@ -29,7 +31,11 @@ export default function SettingsView({ onClose }) {
   useEffect(() => {
     Promise.all([api.loadBusinesses(), api.loadSettings()]).then(([biz, settings]) => {
       setBusinesses(biz);
-      setGeminiKey(settings.geminiKey || '');
+      const grok = settings.grokKey || '';
+      const gemini = settings.geminiKey || '';
+      setAiProvider(settings.aiProvider || (gemini ? 'gemini' : 'grok'));
+      setGrokKey(grok);
+      setGeminiKey(gemini);
       setGeminiModel(settings.geminiModel || 'gemini-2.0-flash');
       const active = biz.find((b) => b.isActive) || biz[0];
       if (active) { setSelectedId(active.id); setForm(active); }
@@ -83,7 +89,7 @@ export default function SettingsView({ onClose }) {
   }
 
   async function saveGlobalSettings() {
-    await api.saveSettings({ geminiKey, geminiModel });
+    await api.saveSettings({ aiProvider, grokKey, geminiKey, geminiModel });
     setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   }
@@ -104,37 +110,84 @@ export default function SettingsView({ onClose }) {
           {/* ── AI ── */}
           <div className="settings-section">
             <div className="settings-section-label">AI Content Generation</div>
-            <div className="settings-field">
-              <label>
-                Gemini API Key
-                <span className="settings-label-hint"> — free at <em>aistudio.google.com</em></span>
-              </label>
-              <div className="settings-key-row">
-                <input
-                  type={showKey ? 'text' : 'password'}
-                  value={geminiKey}
-                  onChange={(e) => { setGeminiKey(e.target.value); setSaved(false); }}
-                  placeholder="AIza..."
-                />
-                <button className="btn-sm" onClick={() => setShowKey((v) => !v)}>
-                  {showKey ? 'Hide' : 'Show'}
-                </button>
-                <button className="btn-sm" onClick={saveGlobalSettings}>Save</button>
-              </div>
-              {geminiKey
-                ? <div className="settings-hint success">✓ AI features enabled</div>
-                : <div className="settings-hint">Without a key, template-based captions are used.</div>
-              }
-            </div>
 
             <div className="settings-field">
-              <label>Model <span className="settings-label-hint">— falls back automatically on quota errors</span></label>
-              <select value={geminiModel} onChange={(e) => { setGeminiModel(e.target.value); setSaved(false); }}>
-                {GEMINI_MODELS.map((m) => (
-                  <option key={m.value} value={m.value}>{m.label}</option>
+              <label>Provider</label>
+              <div className="settings-tone-row">
+                {[
+                  { value: 'grok', label: 'Grok (xAI)' },
+                  { value: 'gemini', label: 'Gemini (Google)' },
+                ].map((p) => (
+                  <button
+                    key={p.value}
+                    className={`tone-btn${aiProvider === p.value ? ' active' : ''}`}
+                    onClick={() => { setAiProvider(p.value); setSaved(false); }}
+                  >
+                    {p.label}
+                  </button>
                 ))}
-              </select>
+              </div>
             </div>
+
+            {aiProvider === 'grok' && (
+              <div className="settings-field">
+                <label>
+                  Grok API Key
+                  <span className="settings-label-hint"> — free $25/mo at <em>console.x.ai</em></span>
+                </label>
+                <div className="settings-key-row">
+                  <input
+                    type={showKey ? 'text' : 'password'}
+                    value={grokKey}
+                    onChange={(e) => { setGrokKey(e.target.value); setSaved(false); }}
+                    placeholder="xai-..."
+                  />
+                  <button className="btn-sm" onClick={() => setShowKey((v) => !v)}>
+                    {showKey ? 'Hide' : 'Show'}
+                  </button>
+                  <button className="btn-sm" onClick={saveGlobalSettings}>Save</button>
+                </div>
+                {grokKey
+                  ? <div className="settings-hint success">✓ AI features enabled</div>
+                  : <div className="settings-hint">Get a free key at console.x.ai</div>
+                }
+              </div>
+            )}
+
+            {aiProvider === 'gemini' && (
+              <>
+                <div className="settings-field">
+                  <label>
+                    Gemini API Key
+                    <span className="settings-label-hint"> — free at <em>aistudio.google.com</em></span>
+                  </label>
+                  <div className="settings-key-row">
+                    <input
+                      type={showKey ? 'text' : 'password'}
+                      value={geminiKey}
+                      onChange={(e) => { setGeminiKey(e.target.value); setSaved(false); }}
+                      placeholder="AIza..."
+                    />
+                    <button className="btn-sm" onClick={() => setShowKey((v) => !v)}>
+                      {showKey ? 'Hide' : 'Show'}
+                    </button>
+                    <button className="btn-sm" onClick={saveGlobalSettings}>Save</button>
+                  </div>
+                  {geminiKey
+                    ? <div className="settings-hint success">✓ AI features enabled</div>
+                    : <div className="settings-hint">Without a key, template-based captions are used.</div>
+                  }
+                </div>
+                <div className="settings-field">
+                  <label>Model <span className="settings-label-hint">— falls back automatically on quota errors</span></label>
+                  <select value={geminiModel} onChange={(e) => { setGeminiModel(e.target.value); setSaved(false); }}>
+                    {GEMINI_MODELS.map((m) => (
+                      <option key={m.value} value={m.value}>{m.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
           </div>
 
           {/* ── Businesses ── */}

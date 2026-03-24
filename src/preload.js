@@ -13,4 +13,5 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveBusiness: (b) => ipcRenderer.invoke('business-save', b),
   deleteBusiness: (id) => ipcRenderer.invoke('business-delete', id),
   setActiveBusiness: (id) => ipcRenderer.invoke('business-set-active', id),
+  exportPost: (payload) => ipcRenderer.invoke('post-export', payload),
 });

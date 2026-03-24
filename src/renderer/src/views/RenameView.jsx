@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { buildFilename, getExt } from '@lib/filename.esm.js';
-import { analyzeImageForKeywords } from '../gemini.js';
+import { analyzeImageForKeywords as analyzeWithGemini } from '../gemini.js';
+import { analyzeImageForKeywords as analyzeWithGrok } from '../grok.js';
 
 const api = window.electronAPI;
 
@@ -17,11 +18,15 @@ export default function RenameView() {
     type: 'idle',
   });
   const [lastExportDir, setLastExportDir] = useState(null);
+  const [aiProvider, setAiProvider] = useState('grok');
+  const [grokKey, setGrokKey] = useState('');
   const [geminiKey, setGeminiKey] = useState('');
   const [geminiModel, setGeminiModel] = useState('gemini-2.0-flash');
   const [activeBusiness, setActiveBusiness] = useState(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [analyzeError, setAnalyzeError] = useState('');
+  const [applyToAll, setApplyToAll] = useState(false);
+  const [baseKeywords, setBaseKeywords] = useState('');
 
   const fileInputRef = useRef(null);
   const folderInputRef = useRef(null);
@@ -34,7 +39,13 @@ export default function RenameView() {
     });
     api.getDownloads().then((dl) => setOutputDir(dl));
     api.loadSettings().then((s) => {
-      setGeminiKey(s.geminiKey || '');
+      const grok = s.grokKey || '';
+      const gemini = s.geminiKey || '';
+      // If no provider saved yet, pick whichever key exists (gemini takes precedence for existing users)
+      const provider = s.aiProvider || (gemini ? 'gemini' : 'grok');
+      setAiProvider(provider);
+      setGrokKey(grok);
+      setGeminiKey(gemini);
       setGeminiModel(s.geminiModel || 'gemini-2.0-flash');
     });
     api.loadBusinesses().then((biz) => {
@@ -87,15 +98,17 @@ export default function RenameView() {
   // ── AI Analyze ────────────────────────────────────────────────
   async function analyzeCurrentPhoto() {
     const photo = photos[currentIndex];
-    if (!photo || !geminiKey || !activeBusiness) return;
+    const activeKey = aiProvider === 'grok' ? grokKey : geminiKey;
+    if (!photo || !activeKey || !activeBusiness) return;
     setAnalyzing(true);
     setAnalyzeError('');
     try {
-      const result = await analyzeImageForKeywords(photo.file, activeBusiness, geminiKey, geminiModel);
+      const analyze = aiProvider === 'grok' ? analyzeWithGrok : analyzeWithGemini;
+      const result = await analyze(photo.file, activeBusiness, activeKey, geminiModel);
       updateKeywords(result.keywords);
     } catch (err) {
       setAnalyzeError(err.message);
-      setTimeout(() => setAnalyzeError(''), 4000);
+      setTimeout(() => setAnalyzeError(''), 6000);
     } finally {
       setAnalyzing(false);
     }
@@ -103,18 +116,38 @@ export default function RenameView() {
 
   // ── Keywords ──────────────────────────────────────────────────
   function updateKeywords(value) {
-    setPhotos((prev) =>
-      prev.map((p, i) => {
-        if (i !== currentIndex) return p;
-        const hadKw = !!p.keywords.trim();
-        const hasKw = !!value.trim();
-        return {
-          ...p,
-          keywords: value,
-          checked: hasKw ? (hadKw ? p.checked : true) : false,
-        };
-      })
-    );
+    if (applyToAll) {
+      setBaseKeywords(value);
+      setPhotos((prev) =>
+        prev.map((p, i) => {
+          const kw = value.trim() ? `${value} ${i + 1}` : '';
+          return { ...p, keywords: kw, checked: !!kw };
+        })
+      );
+    } else {
+      setPhotos((prev) =>
+        prev.map((p, i) => {
+          if (i !== currentIndex) return p;
+          const hadKw = !!p.keywords.trim();
+          const hasKw = !!value.trim();
+          return { ...p, keywords: value, checked: hasKw ? (hadKw ? p.checked : true) : false };
+        })
+      );
+    }
+  }
+
+  function toggleApplyToAll(checked) {
+    setApplyToAll(checked);
+    if (checked) {
+      const base = photos[currentIndex]?.keywords?.replace(/\s+\d+$/, '') || '';
+      setBaseKeywords(base);
+      setPhotos((prev) =>
+        prev.map((p, i) => {
+          const kw = base ? `${base} ${i + 1}` : '';
+          return { ...p, keywords: kw, checked: !!kw };
+        })
+      );
+    }
   }
 
   // ── Filmstrip ─────────────────────────────────────────────────
@@ -245,10 +278,13 @@ export default function RenameView() {
               onKeywordsChange={updateKeywords}
               onToggleChecked={toggleChecked}
               keywordsInputRef={keywordsInputRef}
-              canAnalyze={!!geminiKey && !!activeBusiness}
+              canAnalyze={!!(aiProvider === 'grok' ? grokKey : geminiKey) && !!activeBusiness}
               analyzing={analyzing}
               analyzeError={analyzeError}
               onAnalyze={analyzeCurrentPhoto}
+              applyToAll={applyToAll}
+              baseKeywords={baseKeywords}
+              onToggleApplyToAll={toggleApplyToAll}
             />
           )}
         </div>
@@ -435,6 +471,9 @@ function Viewer({
   analyzing,
   analyzeError,
   onAnalyze,
+  applyToAll,
+  baseKeywords,
+  onToggleApplyToAll,
 }) {
   const filmstripRef = useRef(null);
 
@@ -488,21 +527,33 @@ function Viewer({
           <div className="section-label" style={{ marginBottom: 0 }}>
             Keywords <span className="kw-hint">{kwHint}</span>
           </div>
-          {canAnalyze && (
-            <button
-              className={`analyze-btn${analyzing ? ' loading' : ''}`}
-              onClick={onAnalyze}
-              disabled={analyzing || !currentPhoto}
-              title="Analyze image with Gemini AI"
-            >
-              {analyzing ? '⏳ Analyzing…' : '✨ Analyze'}
-            </button>
-          )}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {photos.length > 1 && (
+              <label className="posts-apply-all">
+                <input
+                  type="checkbox"
+                  checked={applyToAll}
+                  onChange={(e) => onToggleApplyToAll(e.target.checked)}
+                />
+                Apply to all + number
+              </label>
+            )}
+            {canAnalyze && (
+              <button
+                className={`analyze-btn${analyzing ? ' loading' : ''}`}
+                onClick={onAnalyze}
+                disabled={analyzing || !currentPhoto}
+                title="Analyze image with AI"
+              >
+                {analyzing ? '⏳ Analyzing…' : '✨ Analyze'}
+              </button>
+            )}
+          </div>
         </div>
         <input
           ref={keywordsInputRef}
           type="text"
-          value={currentPhoto?.keywords || ''}
+          value={applyToAll ? baseKeywords : (currentPhoto?.keywords || '')}
           onChange={(e) => onKeywordsChange(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && currentIndex < photos.length - 1) onNav(currentIndex + 1);

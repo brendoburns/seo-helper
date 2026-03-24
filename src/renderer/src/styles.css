@@ -796,23 +796,207 @@ select:focus { border-color: var(--accent); }
 }
 .biz-switcher:focus { border-color: var(--accent); }
 
-/* ── POSTS PLACEHOLDER ── */
-.posts-placeholder {
+/* ── POSTS BODY ── */
+.posts-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: 1fr 320px;
+  gap: 0;
+  overflow: hidden;
+}
+
+.posts-preview-col {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  padding: 16px;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  min-height: 0;
+}
+
+.posts-canvas-wrap {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  overflow: hidden;
+}
+
+.posts-canvas {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  cursor: grab;
+}
+.posts-canvas:active { cursor: grabbing; }
+
+.posts-zoom-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+.posts-zoom-slider {
+  flex: 1;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.posts-zoom-val {
+  font-size: 0.65rem;
+  color: var(--muted);
+  min-width: 28px;
+  text-align: right;
+}
+
+.posts-canvas-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 0.65rem;
+  color: var(--muted);
+  letter-spacing: 0.06em;
+  gap: 8px;
+}
+
+.posts-filmstrip {
+  display: flex;
+  flex-direction: row;
+  gap: 6px;
+  padding: 10px 0 4px;
+  overflow-x: auto;
+  flex-shrink: 0;
+  width: 100%;
+  scrollbar-width: thin;
+}
+
+.posts-thumb {
+  position: relative;
+  flex-shrink: 0;
+  width: 60px;
+  height: 60px;
+  border-radius: 5px;
+  overflow: hidden;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.posts-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.posts-thumb.active { border-color: var(--accent); }
+.posts-thumb:hover .posts-thumb-remove { opacity: 1; }
+
+.posts-thumb-remove {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.7);
+  color: #fff;
+  border: none;
+  font-size: 0.55rem;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  line-height: 1;
+}
+
+.posts-thumb-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.posts-dropzone {
+  width: 100%;
+  max-width: 400px;
+  aspect-ratio: 1;
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   gap: 12px;
-  padding: 40px;
+  color: var(--muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+.posts-dropzone:hover { border-color: var(--accent); color: var(--text); }
+.posts-dropzone-icon { font-size: 2.5rem; opacity: 0.4; }
+
+.posts-controls-col {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  overflow-y: auto;
+  background: var(--surface);
+}
+
+.posts-field { display: flex; flex-direction: column; gap: 6px; }
+.posts-field-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   color: var(--muted);
 }
-.posts-placeholder-icon { font-size: 3rem; opacity: 0.3; }
-.posts-placeholder-title { font-size: 1rem; font-weight: 600; color: var(--text); }
-.posts-placeholder-sub {
-  font-size: 0.72rem;
-  text-align: center;
-  max-width: 320px;
-  line-height: 1.6;
+
+.posts-caption {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
+  padding: 8px 10px;
+  resize: vertical;
+  outline: none;
+  line-height: 1.5;
+  transition: border-color 0.15s;
+}
+.posts-caption:focus { border-color: var(--accent); }
+
+.tip.success { color: var(--success); }
+
+.posts-caption-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.posts-apply-all {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.65rem;
+  color: var(--muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.posts-apply-all input { cursor: pointer; accent-color: var(--accent); }
+
+.posts-export-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
